@@ -1,0 +1,29 @@
+--- openai-responses-shared.js.bak-deferfix-20261023_233313	2026-10-23 23:33:13.124553500 +0800
++++ openai-responses-shared.js	2026-10-23 23:33:24.735415700 +0800
+@@ -286,7 +286,7 @@
+     const defaultStrict = options?.strict === undefined ? false : options.strict;
+     const supportsStrictMode = options?.supportsStrictMode ?? true;
+     const supportsOpenAIGrammarTools = options?.supportsOpenAIGrammarTools ?? false;
+-    return tools.map((tool) => {
++    return tools.map((tool, __idx) => {
+         const grammar = resolveGrammarConstrainedSampling(tool, supportsOpenAIGrammarTools);
+         if (grammar) {
+             return {
+@@ -298,7 +298,7 @@
+                     syntax: grammar.format,
+                     definition: grammar.definition,
+                 },
+-                ...(options?.toolSearchResult ? { defer_loading: true } : {}),
++                ...(options?.toolSearchResult && __idx > 0 ? { defer_loading: true } : {}),
+             };
+         }
+         const constrainedStrict = resolveJsonSchemaStrictSampling(tool, supportsStrictMode);
+@@ -308,7 +308,7 @@
+             name: tool.name,
+             description: tool.description,
+             parameters: getJsonSchemaToolParameters(tool, strict === true),
+-            ...(options?.toolSearchResult ? { defer_loading: true } : {}),
++            ...(options?.toolSearchResult && __idx > 0 ? { defer_loading: true } : {}),
+         };
+         if (supportsStrictMode) {
+             functionTool.strict = strict;
