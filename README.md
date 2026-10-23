@@ -83,3 +83,25 @@ DSH 有两份 pi-ai：
 
 ## 建议上游
 此类问题应在上游修复：`convertResponsesTools` 在 `toolSearchResult` 模式下应保证至少一个工具 `defer_loading:false`（或在会话层面保证）。可向 `earendil-works/pi` 与 DSH 官方反馈。
+
+---
+
+## 方法 B2（推荐、已验证）：等长字节补丁（不重打包）
+
+不重打包整份 asar，而是**只对内置 pi-ai 文件做等长原地字节替换**，归档结构与大小完全不变，风险最低。
+
+原理：
+- 将两处 `{ defer_loading: true }` 等长替换为空对象 `{ ...空格... }`（长度不变、合法 JS），从此不再有任何工具被延迟 → DeepSeek「至少一个非延迟」校验恒满足。
+- 用 asar header 里每个文件记录的 **SHA256 校验值**验证偏移绝对正确；再整份逐字节对比确认「只有目标文件区有差异、区外 0 差异」。
+
+脚本：
+- `scripts/patch_asar.mjs`：定位文件、SHA256 校验偏移、等长替换、写出 `app.asar.patched`（原文件不动；`--write` 才写）。
+- `scripts/verify_patch.mjs`：整份逐字节对比，确认只改目标区。
+
+实测结果（DSH 44.7.0，app.asar 182,794,869 字节）：
+- 命中 2 处 defer，全部等长替换；文件大小不变。
+- 整份对比：仅 36 字节差异，全部落在目标文件区间，区外 0 差异；替换后 JS 语法通过。
+
+应用（需关闭 DSH 后替换 app.asar，Windows 提供一键脚本）：
+- `ApplyDSHFix.vbs`：关闭 DSH → 备份当前 app.asar 为 `app.asar.bak-revert` → 用 `app.asar.patched` 覆盖 → 重启 DSH。
+- `RevertDSH.vbs`：一键还原到 `app.asar.bak-revert`。
